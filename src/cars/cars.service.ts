@@ -1,47 +1,69 @@
 import {
-  Body,
-  Injectable,
-  NotFoundException,
-  Post,
-  Patch,
-  Delete,
-  ParseIntPipe,
-  Param,
+	BadRequestException,
+	Injectable,
+	NotFoundException,
 } from '@nestjs/common';
+import { Car } from './interfaces/car.interface';
+import { v4 as uuid } from 'uuid';
+import { CreateCarDto, UpdateCarDto } from './dto';
 
 @Injectable()
 export class CarsService {
-  private cars = [
-    { id: 1, brand: 'toyota', model: 'corolla' },
-    { id: 2, brand: 'fiat', model: 'palio' },
-    { id: 3, brand: 'jeep', model: 'renegade' },
-  ];
+	private cars: Car[] = [
+		{ id: uuid(), brand: 'toyota', model: 'corolla' },
+		{ id: uuid(), brand: 'fiat', model: 'palio' },
+		{ id: uuid(), brand: 'jeep', model: 'renegade' },
+	];
 
-  findAll() {
-    return this.cars;
-  }
+	findAll() {
+		return this.cars;
+	}
 
-  findOneById(id: number) {
-    const car = this.cars.find((car) => car.id === id);
+	findOneById(id: string) {
+		const car = this.cars.find((car) => car.id === id);
 
-    if (!car) throw new NotFoundException(`El auto con el id:${id} no existe`);
+		if (!car) throw new NotFoundException(`El auto con el id:${id} no existe`);
 
-    return car;
-  }
-  @Post()
-  createCar(@Body() body: any) {
-    return body;
-  }
+		return car;
+	}
 
-  @Patch(':id')
-  updateCar(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
-    return body;
-  }
-  @Delete(':id')
-  deleteCar(@Param('id', ParseIntPipe) id: number) {
-    return {
-      method: 'delete',
-      id,
-    };
-  }
+	create(createCarDto: CreateCarDto) {
+		const newCar: Car = {
+			id: uuid(),
+			model: createCarDto.brand,
+			brand: createCarDto.model,
+		};
+
+		this.cars.push(newCar);
+		return newCar;
+	}
+
+	update(id: string, updateCarDto: UpdateCarDto) {
+		let carDB = this.findOneById(id);
+
+		if (updateCarDto.id && updateCarDto.id !== id)
+			throw new BadRequestException(
+				'El id del auto no coincide con el ID del body'
+			);
+
+		this.cars = this.cars.map((car) => {
+			if (car.id === id) {
+				carDB = {
+					...carDB,
+					...updateCarDto,
+					id,
+				};
+				return carDB;
+			}
+			return car;
+		});
+
+		return carDB;
+	}
+
+	delete(id: string) {
+		let carDB = this.findOneById(id);
+
+		this.cars = this.cars.filter((car) => car.id !== id);
+	}
 }
